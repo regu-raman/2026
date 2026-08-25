@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
+import { getCurrentUser } from './auth';
 
 const EXPENSES_KEY = 'daily_expenses_tracker_data_v2';
 const BUDGETS_KEY = 'daily_expenses_budgets_v1';
@@ -125,8 +126,9 @@ const getSampleFamilyMembers = () => [
 ];
 
 // Mappers between JS camelCase and DB snake_case
-const expenseToDb = (exp) => ({
+const expenseToDb = (exp, userId) => ({
   id: exp.id,
+  user_id: userId || null,
   amount: exp.amount,
   category: exp.category,
   date: exp.date,
@@ -147,8 +149,9 @@ const expenseFromDb = (dbExp) => ({
   isShared: Boolean(dbExp.is_shared !== undefined ? dbExp.is_shared : dbExp.isShared)
 });
 
-const recurringToDb = (rec) => ({
+const recurringToDb = (rec, userId) => ({
   id: rec.id,
+  user_id: userId || null,
   amount: rec.amount,
   category: rec.category,
   payment_method: rec.paymentMethod,
@@ -175,10 +178,15 @@ const recurringFromDb = (dbRec) => ({
 
 // --- EXPENSES CRUD ---
 export const getExpenses = async () => {
-  if (isSupabaseConfigured()) {
+  const user = await getCurrentUser();
+  if (isSupabaseConfigured() && user) {
     try {
-      const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-      if (!error && data && data.length > 0) {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (!error && data) {
         const mapped = data.map(expenseFromDb);
         localStorage.setItem(EXPENSES_KEY, JSON.stringify(mapped));
         return mapped;
@@ -203,14 +211,13 @@ export const getExpenses = async () => {
 };
 
 export const saveExpenses = async (expenses) => {
+  const user = await getCurrentUser();
   try {
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
-    if (isSupabaseConfigured()) {
-      const dbPayload = expenses.map(expenseToDb);
+    if (isSupabaseConfigured() && user) {
+      const dbPayload = expenses.map(e => expenseToDb(e, user.id));
       const { error } = await supabase.from('expenses').upsert(dbPayload);
-      if (error) {
-        console.error('Supabase saveExpenses error:', error);
-      }
+      if (error) console.error('Supabase saveExpenses error:', error);
     }
   } catch (error) {
     console.error('Error saving expenses', error);
@@ -266,7 +273,8 @@ export const deleteExpense = async (id) => {
 
 // --- BUDGETS CRUD ---
 export const getBudgets = async () => {
-  if (isSupabaseConfigured()) {
+  const user = await getCurrentUser();
+  if (isSupabaseConfigured() && user) {
     try {
       const { data, error } = await supabase.from('budgets').select('*').eq('id', 'default').single();
       if (!error && data) {
@@ -296,11 +304,13 @@ export const getBudgets = async () => {
 };
 
 export const saveBudgets = async (budgets) => {
+  const user = await getCurrentUser();
   try {
     localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets));
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && user) {
       const dbPayload = {
         id: 'default',
+        user_id: user.id,
         monthly_total: budgets.monthlyTotal,
         categories: budgets.categories
       };
@@ -314,7 +324,8 @@ export const saveBudgets = async (budgets) => {
 
 // --- RECURRING EXPENSES CRUD ---
 export const getRecurringExpenses = async () => {
-  if (isSupabaseConfigured()) {
+  const user = await getCurrentUser();
+  if (isSupabaseConfigured() && user) {
     try {
       const { data, error } = await supabase.from('recurring_expenses').select('*');
       if (!error && data && data.length > 0) {
@@ -341,10 +352,11 @@ export const getRecurringExpenses = async () => {
 };
 
 export const saveRecurringExpenses = async (items) => {
+  const user = await getCurrentUser();
   try {
     localStorage.setItem(RECURRING_KEY, JSON.stringify(items));
-    if (isSupabaseConfigured()) {
-      const dbPayload = items.map(recurringToDb);
+    if (isSupabaseConfigured() && user) {
+      const dbPayload = items.map(i => recurringToDb(i, user.id));
       const { error } = await supabase.from('recurring_expenses').upsert(dbPayload);
       if (error) console.error('Supabase saveRecurringExpenses error:', error);
     }
@@ -383,7 +395,8 @@ export const deleteRecurringExpense = async (id) => {
 
 // --- FAMILY MEMBERS CRUD ---
 export const getFamilyMembers = async () => {
-  if (isSupabaseConfigured()) {
+  const user = await getCurrentUser();
+  if (isSupabaseConfigured() && user) {
     try {
       const { data, error } = await supabase.from('family_members').select('name');
       if (!error && data && data.length > 0) {
@@ -412,13 +425,14 @@ export const getFamilyMembers = async () => {
 export const addFamilyMember = async (name) => {
   if (!name || !name.trim()) return await getFamilyMembers();
   const members = await getFamilyMembers();
+  const user = await getCurrentUser();
   const trimmed = name.trim();
   if (!members.includes(trimmed)) {
     const updated = [...members, trimmed];
     localStorage.setItem(FAMILY_KEY, JSON.stringify(updated));
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && user) {
       try {
-        const { error } = await supabase.from('family_members').insert([{ name: trimmed }]);
+        const { error } = await supabase.from('family_members').insert([{ name: trimmed, user_id: user.id }]);
         if (error) console.error('Supabase addFamilyMember error:', error);
       } catch (error) {
         console.error('Error adding family_member to Supabase:', error);

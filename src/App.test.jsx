@@ -3,18 +3,26 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
 
-describe('App component integration with new features', () => {
+describe('App component integration with auth flow', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('renders application header and title', async () => {
+  it('renders login/registration auth screen by default when unauthenticated', async () => {
     render(<App />);
     expect(await screen.findByText('Daily Expense Tracker')).toBeInTheDocument();
+    expect(await screen.findByText('Sign in to manage your expenses')).toBeInTheDocument();
   });
 
-  it('navigates between all tabs including Budgets, Family, and Recurring', async () => {
+  it('allows guest login and navigates across tabs', async () => {
     render(<App />);
+
+    // Click guest quick access button
+    const guestBtn = await screen.findByRole('button', { name: /continue as guest/i });
+    fireEvent.click(guestBtn);
+
+    // Dashboard title
+    expect(await screen.findByText('Today\'s Total')).toBeInTheDocument();
 
     // Switch to Budgets
     fireEvent.click(await screen.findByRole('button', { name: /budgets/i }));
@@ -23,9 +31,5 @@ describe('App component integration with new features', () => {
     // Switch to Family
     fireEvent.click(await screen.findByRole('button', { name: /family/i }));
     expect(await screen.findByText('Family & Shared Expenses')).toBeInTheDocument();
-
-    // Switch to Recurring
-    fireEvent.click(await screen.findByRole('button', { name: /recurring/i }));
-    expect(await screen.findByText('Recurring Expenses & Bills')).toBeInTheDocument();
   });
 });

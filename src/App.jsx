@@ -7,11 +7,15 @@ import BudgetManager from './components/BudgetManager';
 import FamilyExpenses from './components/FamilyExpenses';
 import RecurringExpenses from './components/RecurringExpenses';
 import ExpenseModal from './components/ExpenseModal';
+import AuthScreen from './components/AuthScreen';
 import { getExpenses, addExpense, updateExpense, deleteExpense } from './utils/storage';
 import { processDueRecurringExpenses } from './utils/recurring';
+import { onAuthStateChange, signOutUser, getCurrentUser } from './utils/auth';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [expenses, setExpenses] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,15 +23,25 @@ export default function App() {
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
-    let isMounted = true;
-    const initApp = async () => {
-      const { updatedExpenses } = await processDueRecurringExpenses();
-      const current = updatedExpenses || await getExpenses();
-      if (isMounted) setExpenses(current);
-    };
-    initApp();
-    return () => { isMounted = false; };
+    // Listen for auth state changes
+    const unsubscribe = onAuthStateChange(async (user) => {
+      setCurrentUser(user);
+      setAuthChecking(false);
+
+      if (user) {
+        const { updatedExpenses } = await processDueRecurringExpenses();
+        const current = updatedExpenses || await getExpenses();
+        setExpenses(current);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  const handleSignOut = async () => {
+    await signOutUser();
+    setCurrentUser(null);
+  };
 
   const handleOpenAddModal = () => {
     setEditingExpense(null);
@@ -67,6 +81,18 @@ export default function App() {
     }
   };
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+        <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen onAuthSuccess={(user) => setCurrentUser(user)} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Header / Navigation */}
@@ -74,6 +100,8 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenAddModal={handleOpenAddModal}
+        currentUser={currentUser}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Content Area */}

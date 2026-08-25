@@ -2,19 +2,8 @@
 > daily-expense-tracker@1.0.0 dev
 > vite
 
-4:56:25 AM [vite] (client) Re-optimizing dependencies because lockfile has changed
 
-  VITE v6.4.3  ready in 805 ms
+  VITE v6.4.3  ready in 949 ms
 
   ➜  Local:   http://localhost:3000/
   ➜  Network: http://192.168.0.2:3000/
-8:07:23 AM [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/RecurringExpenses.jsx, /src/components/FamilyExpenses.jsx, /src/components/BudgetManager.jsx, /src/components/ExpenseModal.jsx
-8:23:07 AM [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/RecurringExpenses.jsx, /src/components/FamilyExpenses.jsx, /src/components/BudgetManager.jsx, /src/components/ExpenseModal.jsx
-8:23:34 AM [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/RecurringExpenses.jsx
-8:23:38 AM [vite] (client) hmr update /src/components/ExpenseModal.jsx, /src/index.css
-8:23:43 AM [vite] (client) hmr update /src/components/BudgetManager.jsx, /src/index.css
-8:23:47 AM [vite] (client) hmr update /src/components/FamilyExpenses.jsx, /src/index.css
-8:23:53 AM [vite] (client) hmr update /src/components/RecurringExpenses.jsx, /src/index.css
-8:24:00 AM [vite] (client) hmr update /src/App.jsx, /src/index.css
-8:24:22 AM [vite] (client) page reload src/App.test.jsx
-8:24:55 AM [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/RecurringExpenses.jsx
