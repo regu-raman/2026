@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Calendar, TrendingUp, DollarSign, Clock, ArrowRight, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Calendar, TrendingUp, IndianRupee, Clock, ArrowRight, Edit2, Trash2 } from 'lucide-react';
 import { calculateTotals, formatCurrency } from '../utils/calculations';
 import { getCategoryConfig } from '../constants/categories';
 
@@ -111,7 +111,7 @@ export default function Home({ expenses = [], onOpenAddModal, onEditExpense, onD
         {recentExpenses.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
-              <DollarSign className="w-6 h-6" />
+              <IndianRupee className="w-6 h-6" />
             </div>
             <p className="text-slate-600 font-medium text-sm">No expenses recorded yet</p>
             <p className="text-slate-400 text-xs mt-1">Click "+ Add Expense" to get started.</p>

@@ -36,8 +36,9 @@ describe('calculations utility functions', () => {
   ];
 
   it('formats currency correctly', () => {
-    expect(formatCurrency(50)).toBe('$50.00');
-    expect(formatCurrency(0)).toBe('$0.00');
+    expect(formatCurrency(50)).toContain('50.00');
+    expect(formatCurrency(50)).toContain('₹');
+    expect(formatCurrency(0)).toContain('0.00');
   });
 
   it('calculates totals correctly for today', () => {

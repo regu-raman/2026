@@ -96,7 +96,7 @@ export default function Reports({ expenses = [] }) {
                   tickLine={false}
                   axisLine={{ stroke: '#e2e8f0' }}
                   tick={{ fontSize: 12, fill: '#64748b' }}
-                  tickFormatter={(val) => `$${val}`}
+                  tickFormatter={(val) => `₹${val}`}
                 />
                 <Tooltip
                   formatter={(value) => [formatCurrency(value), 'Total Spent']}
@@ -201,7 +201,7 @@ export default function Reports({ expenses = [] }) {
                   {expenses.length} Records
                 </span>
                 <p className="text-xs text-slate-500 mt-1">
-                  Average spend: {expenses.length > 0 ? formatCurrency(totalSpent / expenses.length) : '$0.00'} / record
+                  Average spend: {expenses.length > 0 ? formatCurrency(totalSpent / expenses.length) : '₹0.00'} / record
                 </p>
               </div>
             </div>

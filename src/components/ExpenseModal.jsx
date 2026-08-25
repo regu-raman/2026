@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Calendar, Tag, CreditCard, AlignLeft } from 'lucide-react';
+import { X, IndianRupee, Calendar, Tag, CreditCard, AlignLeft } from 'lucide-react';
 import { CATEGORIES } from '../constants/categories';
 import { PAYMENT_METHODS } from '../constants/paymentMethods';
 
@@ -84,11 +84,11 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
           {/* Amount */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-              Amount ($) *
+              Amount (₹) *
             </label>
             <div className="relative rounded-xl shadow-xs">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <DollarSign className="w-5 h-5" />
+                <IndianRupee className="w-5 h-5" />
               </div>
               <input
                 type="number"
