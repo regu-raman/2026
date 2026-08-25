@@ -274,15 +274,23 @@ export const deleteExpense = async (id) => {
 // --- BUDGETS CRUD ---
 export const getBudgets = async () => {
   const user = await getCurrentUser();
+  const userId = user?.id || 'guest';
+  const userBudgetsKey = `${BUDGETS_KEY}_${userId}`;
+
   if (isSupabaseConfigured() && user) {
     try {
-      const { data, error } = await supabase.from('budgets').select('*').eq('id', 'default').single();
+      const { data, error } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
       if (!error && data) {
         const loaded = {
           monthlyTotal: Number(data.monthly_total) || 25000,
           categories: data.categories || {}
         };
-        localStorage.setItem(BUDGETS_KEY, JSON.stringify(loaded));
+        localStorage.setItem(userBudgetsKey, JSON.stringify(loaded));
         return loaded;
       }
     } catch (error) {
@@ -291,10 +299,10 @@ export const getBudgets = async () => {
   }
 
   try {
-    const data = localStorage.getItem(BUDGETS_KEY);
+    const data = localStorage.getItem(userBudgetsKey) || localStorage.getItem(BUDGETS_KEY);
     if (!data) {
       const initial = getSampleBudgets();
-      localStorage.setItem(BUDGETS_KEY, JSON.stringify(initial));
+      localStorage.setItem(userBudgetsKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -305,11 +313,14 @@ export const getBudgets = async () => {
 
 export const saveBudgets = async (budgets) => {
   const user = await getCurrentUser();
+  const userId = user?.id || 'guest';
+  const userBudgetsKey = `${BUDGETS_KEY}_${userId}`;
+
   try {
-    localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets));
+    localStorage.setItem(userBudgetsKey, JSON.stringify(budgets));
     if (isSupabaseConfigured() && user) {
       const dbPayload = {
-        id: 'default',
+        id: `budget-${user.id}`,
         user_id: user.id,
         monthly_total: budgets.monthlyTotal,
         categories: budgets.categories

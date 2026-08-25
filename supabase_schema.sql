@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 
 -- 2. Create budgets table
 CREATE TABLE IF NOT EXISTS public.budgets (
-    id TEXT PRIMARY KEY DEFAULT 'default',
+    id TEXT PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) DEFAULT auth.uid(),
     monthly_total NUMERIC(12, 2) NOT NULL DEFAULT 25000.00,
     categories JSONB DEFAULT '{}'::jsonb,
