@@ -48,11 +48,20 @@ CREATE TABLE IF NOT EXISTS public.family_members (
     UNIQUE(user_id, name)
 );
 
+-- 5. Create profiles table for username and user profile mapping
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.family_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing public policies if re-running
 DROP POLICY IF EXISTS "Allow public read/write on expenses" ON public.expenses;
@@ -81,6 +90,13 @@ CREATE POLICY "User recurring access" ON public.recurring_expenses
 CREATE POLICY "User family members access" ON public.family_members
     FOR ALL USING (auth.uid() = user_id OR user_id IS NULL)
     WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+
+CREATE POLICY "Public profile lookup" ON public.profiles
+    FOR SELECT USING (true);
+
+CREATE POLICY "User profile modification" ON public.profiles
+    FOR ALL USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
 
 -- Insert Default Family Members
 INSERT INTO public.family_members (name) VALUES

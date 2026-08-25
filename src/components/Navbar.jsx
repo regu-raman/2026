@@ -69,7 +69,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAddModal, curren
               <div className="flex items-center space-x-2 pl-2 border-l border-slate-200">
                 <div className="hidden lg:flex items-center space-x-1.5 text-xs text-slate-600 font-medium px-2 py-1 bg-slate-100 rounded-lg">
                   <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="max-w-[120px] truncate">{currentUser.email}</span>
+                  <span className="max-w-[120px] truncate">{currentUser.username || currentUser.email}</span>
                 </div>
                 <button
                   onClick={onSignOut}

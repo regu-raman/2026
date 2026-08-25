@@ -11,7 +11,7 @@ describe('App component integration with auth flow', () => {
   it('renders login/registration auth screen by default when unauthenticated', async () => {
     render(<App />);
     expect(await screen.findByText('Daily Expense Tracker')).toBeInTheDocument();
-    expect(await screen.findByText('Sign in to manage your expenses')).toBeInTheDocument();
+    expect(await screen.findByText('Sign in using your username or email')).toBeInTheDocument();
   });
 
   it('allows guest login and navigates across tabs', async () => {

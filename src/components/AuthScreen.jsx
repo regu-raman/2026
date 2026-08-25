@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Wallet, Mail, Lock, LogIn, UserPlus, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Wallet, Mail, Lock, User, LogIn, UserPlus, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { signInUser, signUpUser } from '../utils/auth';
 
 export default function AuthScreen({ onAuthSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -18,15 +19,21 @@ export default function AuthScreen({ onAuthSuccess }) {
 
     try {
       if (isRegister) {
-        const res = await signUpUser(email, password);
+        if (!email.trim() || !username.trim() || !password) {
+          throw new Error('Please fill in all fields (Email, Username, and Password).');
+        }
+        const res = await signUpUser(email, username, password);
         if (res.needsVerification) {
-          setSuccessMsg('Registration successful! Please check your email inbox to verify your email address before logging in.');
+          setSuccessMsg('Registration successful! Please check your email inbox to verify your account before logging in.');
         } else {
           setSuccessMsg('Registration successful!');
           if (res.user) onAuthSuccess(res.user);
         }
       } else {
-        const res = await signInUser(email, password);
+        if (!username.trim() || !password) {
+          throw new Error('Please enter your username/email and password.');
+        }
+        const res = await signInUser(username, password);
         if (res.user) {
           onAuthSuccess(res.user);
         }
@@ -41,7 +48,7 @@ export default function AuthScreen({ onAuthSuccess }) {
   const handleDemoGuestLogin = async () => {
     try {
       setLoading(true);
-      const res = await signInUser('demo.user@expensetracker.local', 'Demo123456!');
+      const res = await signInUser('demo_user', 'Demo123456!');
       if (res.user) onAuthSuccess(res.user);
     } catch (err) {
       setErrorMsg('Guest login failed');
@@ -62,7 +69,7 @@ export default function AuthScreen({ onAuthSuccess }) {
             Daily Expense Tracker
           </h1>
           <p className="text-slate-500 text-sm">
-            {isRegister ? 'Create your account to start budgeting' : 'Sign in to manage your expenses'}
+            {isRegister ? 'Register your account to manage budgets' : 'Sign in using your username or email'}
           </p>
         </div>
 
@@ -105,25 +112,49 @@ export default function AuthScreen({ onAuthSuccess }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Email field on Register */}
+          {isRegister && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Email Address *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Username field */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-              Email Address *
+              {isRegister ? 'Username *' : 'Username or Email Address *'}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <Mail className="w-4 h-4" />
+                <User className="w-4 h-4" />
               </div>
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder={isRegister ? 'johndoe' : 'username or name@example.com'}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 text-sm font-medium rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
               />
             </div>
           </div>
 
+          {/* Password field */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
               Password *
