@@ -1,11 +1,14 @@
 import React from 'react';
-import { Wallet, Home, History as HistoryIcon, PieChart, Plus } from 'lucide-react';
+import { Wallet, Home, History as HistoryIcon, PieChart, Target, Users, Repeat, Plus } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, onOpenAddModal }) {
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'history', label: 'History', icon: HistoryIcon },
     { id: 'reports', label: 'Reports', icon: PieChart },
+    { id: 'budgets', label: 'Budgets', icon: Target },
+    { id: 'family', label: 'Family', icon: Users },
+    { id: 'recurring', label: 'Recurring', icon: Repeat },
   ];
 
   return (
@@ -14,7 +17,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAddModal }) {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div
-            className="flex items-center space-x-3 cursor-pointer"
+            className="flex items-center space-x-3 cursor-pointer shrink-0"
             onClick={() => setActiveTab('home')}
           >
             <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
@@ -30,8 +33,8 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAddModal }) {
             </div>
           </div>
 
-          {/* Nav Tabs */}
-          <nav className="flex items-center space-x-1 sm:space-x-2">
+          {/* Nav Tabs (Scrollable on small mobile screens) */}
+          <nav className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar py-2 mx-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -39,7 +42,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAddModal }) {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                     isActive
                       ? 'bg-indigo-50 text-indigo-700 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -55,7 +58,7 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAddModal }) {
           {/* Quick Add Button */}
           <button
             onClick={onOpenAddModal}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-md shadow-indigo-200 transition-colors"
+            className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-md shadow-indigo-200 transition-colors shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Add Expense</span>

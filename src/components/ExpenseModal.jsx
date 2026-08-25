@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, IndianRupee, Calendar, Tag, CreditCard, AlignLeft } from 'lucide-react';
+import { X, IndianRupee, Calendar, Tag, CreditCard, AlignLeft, Users, CheckSquare } from 'lucide-react';
 import { CATEGORIES } from '../constants/categories';
 import { PAYMENT_METHODS } from '../constants/paymentMethods';
+import { getFamilyMembers } from '../utils/storage';
 
 export default function ExpenseModal({ isOpen, onClose, onSave, initialData = null }) {
   const [amount, setAmount] = useState('');
@@ -9,21 +10,30 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
   const [date, setDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [note, setNote] = useState('');
+  const [member, setMember] = useState('Self');
+  const [isShared, setIsShared] = useState(false);
+  const [familyMembers, setFamilyMembers] = useState([]);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    setFamilyMembers(getFamilyMembers());
+
     if (initialData) {
       setAmount(initialData.amount ? String(initialData.amount) : '');
       setCategory(initialData.category || 'Food');
       setDate(initialData.date || new Date().toISOString().split('T')[0]);
       setPaymentMethod(initialData.paymentMethod || 'UPI');
       setNote(initialData.note || '');
+      setMember(initialData.member || 'Self');
+      setIsShared(Boolean(initialData.isShared));
     } else {
       setAmount('');
       setCategory('Food');
       setDate(new Date().toISOString().split('T')[0]);
       setPaymentMethod('UPI');
       setNote('');
+      setMember('Self');
+      setIsShared(false);
     }
     setErrors({});
   }, [initialData, isOpen]);
@@ -58,7 +68,9 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
       category,
       date,
       paymentMethod,
-      note: note.trim()
+      note: note.trim(),
+      member,
+      isShared
     });
     onClose();
   };
@@ -129,6 +141,43 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Family Member & Shared Expense Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                Payer / Member
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <Users className="w-4 h-4" />
+                </div>
+                <select
+                  value={member}
+                  onChange={(e) => setMember(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium focus:outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none"
+                >
+                  {familyMembers.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center pt-5">
+              <label className="relative flex items-center space-x-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isShared}
+                  onChange={(e) => setIsShared(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-slate-300 rounded-md focus:ring-indigo-500"
+                />
+                <span className="text-xs font-semibold text-slate-700">Family Shared Expense</span>
+              </label>
             </div>
           </div>
 

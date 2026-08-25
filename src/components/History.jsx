@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Calendar, Edit2, Trash2, RefreshCw } from 'lucide-react';
+import { Search, Filter, Calendar, Edit2, Trash2, RefreshCw, Download, FileSpreadsheet } from 'lucide-react';
 import { filterExpenses, formatCurrency } from '../utils/calculations';
+import { exportToCSV, exportToExcel } from '../utils/export';
 import { CATEGORIES, getCategoryConfig } from '../constants/categories';
 
 export default function History({ expenses = [], onEditExpense, onDeleteExpense }) {
@@ -37,8 +38,23 @@ export default function History({ expenses = [], onEditExpense, onDeleteExpense 
             Search, filter, and manage all your past expense records.
           </p>
         </div>
-        <div className="text-sm font-semibold text-slate-600 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-xs self-start sm:self-auto">
-          Total Found: <span className="text-indigo-600">{filteredExpenses.length}</span> entries
+        <div className="flex items-center space-x-2 self-start sm:self-auto">
+          <button
+            onClick={() => exportToCSV(filteredExpenses)}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-xs transition-colors"
+            title="Export CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>CSV Export</span>
+          </button>
+          <button
+            onClick={() => exportToExcel(filteredExpenses)}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-xs font-semibold text-white shadow-xs transition-colors"
+            title="Export Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Excel Export</span>
+          </button>
         </div>
       </div>
 

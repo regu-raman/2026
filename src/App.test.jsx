@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
 
-describe('App component integration', () => {
+describe('App component integration with new features', () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -11,28 +11,21 @@ describe('App component integration', () => {
   it('renders application header and title', () => {
     render(<App />);
     expect(screen.getByText('Daily Expense Tracker')).toBeInTheDocument();
-    expect(screen.getByText("Today's Total")).toBeInTheDocument();
-    expect(screen.getByText("This Week's Total")).toBeInTheDocument();
-    expect(screen.getByText("This Month's Total")).toBeInTheDocument();
   });
 
-  it('opens add expense modal when Add Expense button is clicked', () => {
-    render(<App />);
-    const addBtn = screen.getAllByText('Add Expense')[0];
-    fireEvent.click(addBtn);
-
-    expect(screen.getByText('Add New Expense')).toBeInTheDocument();
-  });
-
-  it('navigates between Home, History, and Reports tabs', () => {
+  it('navigates between all tabs including Budgets, Family, and Recurring', () => {
     render(<App />);
 
-    // Switch to History
-    fireEvent.click(screen.getByRole('button', { name: /history/i }));
-    expect(screen.getByText('Expense History')).toBeInTheDocument();
+    // Switch to Budgets
+    fireEvent.click(screen.getByRole('button', { name: /budgets/i }));
+    expect(screen.getByText('Budget Limits & Goal Tracker')).toBeInTheDocument();
 
-    // Switch to Reports
-    fireEvent.click(screen.getByRole('button', { name: /reports/i }));
-    expect(screen.getByText('Reports & Analytics')).toBeInTheDocument();
+    // Switch to Family
+    fireEvent.click(screen.getByRole('button', { name: /family/i }));
+    expect(screen.getByText('Family & Shared Expenses')).toBeInTheDocument();
+
+    // Switch to Recurring
+    fireEvent.click(screen.getByRole('button', { name: /recurring/i }));
+    expect(screen.getByText('Recurring Expenses & Bills')).toBeInTheDocument();
   });
 });

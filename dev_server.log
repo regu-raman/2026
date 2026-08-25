@@ -1,0 +1,10 @@
+
+> daily-expense-tracker@1.0.0 dev
+> vite
+
+4:56:25 AM [vite] (client) Re-optimizing dependencies because lockfile has changed
+
+  VITE v6.4.3  ready in 805 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.0.2:3000/

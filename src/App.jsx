@@ -3,8 +3,12 @@ import Navbar from './components/Navbar';
 import Home from './components/Home';
 import History from './components/History';
 import Reports from './components/Reports';
+import BudgetManager from './components/BudgetManager';
+import FamilyExpenses from './components/FamilyExpenses';
+import RecurringExpenses from './components/RecurringExpenses';
 import ExpenseModal from './components/ExpenseModal';
 import { getExpenses, addExpense, updateExpense, deleteExpense } from './utils/storage';
+import { processDueRecurringExpenses } from './utils/recurring';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function App() {
@@ -15,8 +19,9 @@ export default function App() {
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
-    const data = getExpenses();
-    setExpenses(data);
+    // Process due recurring bills automatically on app boot
+    const { updatedExpenses } = processDueRecurringExpenses();
+    setExpenses(updatedExpenses || getExpenses());
   }, []);
 
   const handleOpenAddModal = () => {
@@ -88,6 +93,18 @@ export default function App() {
 
         {activeTab === 'reports' && (
           <Reports expenses={expenses} />
+        )}
+
+        {activeTab === 'budgets' && (
+          <BudgetManager expenses={expenses} />
+        )}
+
+        {activeTab === 'family' && (
+          <FamilyExpenses expenses={expenses} />
+        )}
+
+        {activeTab === 'recurring' && (
+          <RecurringExpenses onExpensesUpdated={(updated) => setExpenses(updated)} />
         )}
       </main>
 
