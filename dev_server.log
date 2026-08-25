@@ -8,3 +8,4 @@
 
   ➜  Local:   http://localhost:3000/
   ➜  Network: http://192.168.0.2:3000/
+8:07:23 AM [vite] (client) hmr update /src/App.jsx, /src/index.css, /src/components/RecurringExpenses.jsx, /src/components/FamilyExpenses.jsx, /src/components/BudgetManager.jsx, /src/components/ExpenseModal.jsx

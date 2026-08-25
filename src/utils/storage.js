@@ -124,6 +124,42 @@ const getSampleFamilyMembers = () => [
   'Family Shared'
 ];
 
+// Mappers between JS camelCase and DB snake_case
+const expenseToDb = (exp) => ({
+  id: exp.id,
+  amount: exp.amount,
+  category: exp.category,
+  date: exp.date,
+  payment_method: exp.paymentMethod,
+  note: exp.note,
+  member: exp.member || 'Self',
+  is_shared: Boolean(exp.isShared)
+});
+
+const expenseFromDb = (dbExp) => ({
+  id: dbExp.id,
+  amount: Number(dbExp.amount) || 0,
+  category: dbExp.category,
+  date: dbExp.date,
+  paymentMethod: dbExp.payment_method || dbExp.paymentMethod,
+  note: dbExp.note || '',
+  member: dbExp.member || 'Self',
+  isShared: Boolean(dbExp.is_shared !== undefined ? dbExp.is_shared : dbExp.isShared)
+});
+
+const recurringToDb = (rec) => ({
+  id: rec.id,
+  amount: rec.amount,
+  category: rec.category,
+  payment_method: rec.paymentMethod,
+  note: rec.note,
+  frequency: rec.frequency,
+  next_due_date: rec.nextDueDate,
+  member: rec.member || 'Self',
+  is_shared: Boolean(rec.isShared),
+  active: Boolean(rec.active)
+});
+
 // --- EXPENSES CRUD ---
 export const getExpenses = () => {
   try {
@@ -144,7 +180,8 @@ export const saveExpenses = (expenses) => {
   try {
     localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
     if (isSupabaseConfigured()) {
-      supabase.from('expenses').upsert(expenses).catch(console.error);
+      const dbPayload = expenses.map(expenseToDb);
+      supabase.from('expenses').upsert(dbPayload).catch(console.error);
     }
   } catch (error) {
     console.error('Error saving expenses', error);
@@ -186,7 +223,10 @@ export const updateExpense = (id, updatedData) => {
 export const deleteExpense = (id) => {
   const expenses = getExpenses();
   const updated = expenses.filter(exp => exp.id !== id);
-  saveExpenses(updated);
+  localStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
+  if (isSupabaseConfigured()) {
+    supabase.from('expenses').delete().eq('id', id).catch(console.error);
+  }
   return updated;
 };
 
@@ -209,7 +249,12 @@ export const saveBudgets = (budgets) => {
   try {
     localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets));
     if (isSupabaseConfigured()) {
-      supabase.from('budgets').upsert([{ id: 'default', ...budgets }]).catch(console.error);
+      const dbPayload = {
+        id: 'default',
+        monthly_total: budgets.monthlyTotal,
+        categories: budgets.categories
+      };
+      supabase.from('budgets').upsert([dbPayload]).catch(console.error);
     }
   } catch (error) {
     console.error('Error saving budgets', error);
@@ -235,7 +280,8 @@ export const saveRecurringExpenses = (items) => {
   try {
     localStorage.setItem(RECURRING_KEY, JSON.stringify(items));
     if (isSupabaseConfigured()) {
-      supabase.from('recurring_expenses').upsert(items).catch(console.error);
+      const dbPayload = items.map(recurringToDb);
+      supabase.from('recurring_expenses').upsert(dbPayload).catch(console.error);
     }
   } catch (error) {
     console.error('Error saving recurring expenses', error);
@@ -258,7 +304,10 @@ export const addRecurringExpense = (item) => {
 export const deleteRecurringExpense = (id) => {
   const items = getRecurringExpenses();
   const updated = items.filter(item => item.id !== id);
-  saveRecurringExpenses(updated);
+  localStorage.setItem(RECURRING_KEY, JSON.stringify(updated));
+  if (isSupabaseConfigured()) {
+    supabase.from('recurring_expenses').delete().eq('id', id).catch(console.error);
+  }
   return updated;
 };
 
@@ -284,6 +333,9 @@ export const addFamilyMember = (name) => {
   if (!members.includes(trimmed)) {
     const updated = [...members, trimmed];
     localStorage.setItem(FAMILY_KEY, JSON.stringify(updated));
+    if (isSupabaseConfigured()) {
+      supabase.from('family_members').insert([{ name: trimmed }]).catch(console.error);
+    }
     return updated;
   }
   return members;
