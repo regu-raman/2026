@@ -68,3 +68,18 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO public.budgets (id, monthly_total, categories) VALUES
     ('default', 25000.00, '{"Food": 8000, "Fuel": 4000, "Bills": 5000, "Medical": 4000, "Shopping": 6000, "Education": 5000, "Travel": 3000, "Other": 2000}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
+
+-- Insert Sample Expenses Data
+INSERT INTO public.expenses (id, amount, category, date, payment_method, note, member, is_shared) VALUES
+    ('sample-1', 450.00, 'Food', CURRENT_DATE, 'UPI', 'Dinner with family', 'Self', FALSE),
+    ('sample-2', 1200.00, 'Fuel', CURRENT_DATE, 'Credit Card', 'Car full tank fuel', 'Spouse', TRUE),
+    ('sample-3', 3500.00, 'Shopping', CURRENT_DATE - INTERVAL '2 days', 'Credit Card', 'Grocery & Home supplies', 'Family Shared', TRUE),
+    ('sample-4', 2400.00, 'Bills', CURRENT_DATE - INTERVAL '4 days', 'Bank Transfer', 'Electricity bill', 'Self', TRUE),
+    ('sample-5', 450.00, 'Travel', CURRENT_DATE - INTERVAL '5 days', 'Cash', 'Metro train pass', 'Kids', FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+-- Insert Sample Recurring Expenses Data
+INSERT INTO public.recurring_expenses (id, amount, category, payment_method, note, frequency, next_due_date, member, is_shared, active) VALUES
+    ('rec-1', 12000.00, 'Bills', 'Bank Transfer', 'House Rent', 'Monthly', CURRENT_DATE, 'Family Shared', TRUE, TRUE),
+    ('rec-2', 699.00, 'Bills', 'Credit Card', 'Broadband Wi-Fi Plan', 'Monthly', CURRENT_DATE, 'Self', FALSE, TRUE)
+ON CONFLICT (id) DO NOTHING;
