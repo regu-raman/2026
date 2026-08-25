@@ -16,7 +16,11 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    setFamilyMembers(getFamilyMembers());
+    let isMounted = true;
+    getFamilyMembers().then(members => {
+      if (isMounted && members) setFamilyMembers(members);
+    });
+    return () => { isMounted = false; };
 
     if (initialData) {
       setAmount(initialData.amount ? String(initialData.amount) : '');

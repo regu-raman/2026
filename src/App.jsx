@@ -19,9 +19,14 @@ export default function App() {
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
-    // Process due recurring bills automatically on app boot
-    const { updatedExpenses } = processDueRecurringExpenses();
-    setExpenses(updatedExpenses || getExpenses());
+    let isMounted = true;
+    const initApp = async () => {
+      const { updatedExpenses } = await processDueRecurringExpenses();
+      const current = updatedExpenses || await getExpenses();
+      if (isMounted) setExpenses(current);
+    };
+    initApp();
+    return () => { isMounted = false; };
   }, []);
 
   const handleOpenAddModal = () => {
@@ -39,12 +44,12 @@ export default function App() {
     setEditingExpense(null);
   };
 
-  const handleSaveExpense = (formData) => {
+  const handleSaveExpense = async (formData) => {
     if (editingExpense) {
-      const updated = updateExpense(editingExpense.id, formData);
+      const updated = await updateExpense(editingExpense.id, formData);
       setExpenses(updated);
     } else {
-      const updated = addExpense(formData);
+      const updated = await addExpense(formData);
       setExpenses(updated);
     }
     handleCloseModal();
@@ -54,9 +59,9 @@ export default function App() {
     setDeletingId(id);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingId) {
-      const updated = deleteExpense(deletingId);
+      const updated = await deleteExpense(deletingId);
       setExpenses(updated);
       setDeletingId(null);
     }

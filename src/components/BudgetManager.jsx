@@ -10,9 +10,14 @@ export default function BudgetManager({ expenses = [] }) {
   const [editedBudgets, setEditedBudgets] = useState({ monthlyTotal: 0, categories: {} });
 
   useEffect(() => {
-    const loaded = getBudgets();
-    setBudgets(loaded);
-    setEditedBudgets(loaded);
+    let isMounted = true;
+    getBudgets().then(loaded => {
+      if (isMounted && loaded) {
+        setBudgets(loaded);
+        setEditedBudgets(loaded);
+      }
+    });
+    return () => { isMounted = false; };
   }, []);
 
   // Filter expenses for current month
@@ -23,9 +28,9 @@ export default function BudgetManager({ expenses = [] }) {
 
   const totalSpentThisMonth = currentMonthExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    saveBudgets(editedBudgets);
+    await saveBudgets(editedBudgets);
     setBudgets(editedBudgets);
     setIsEditing(false);
   };

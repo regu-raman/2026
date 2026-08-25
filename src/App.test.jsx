@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
 
@@ -8,24 +8,24 @@ describe('App component integration with new features', () => {
     localStorage.clear();
   });
 
-  it('renders application header and title', () => {
+  it('renders application header and title', async () => {
     render(<App />);
-    expect(screen.getByText('Daily Expense Tracker')).toBeInTheDocument();
+    expect(await screen.findByText('Daily Expense Tracker')).toBeInTheDocument();
   });
 
-  it('navigates between all tabs including Budgets, Family, and Recurring', () => {
+  it('navigates between all tabs including Budgets, Family, and Recurring', async () => {
     render(<App />);
 
     // Switch to Budgets
-    fireEvent.click(screen.getByRole('button', { name: /budgets/i }));
-    expect(screen.getByText('Budget Limits & Goal Tracker')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /budgets/i }));
+    expect(await screen.findByText('Budget Limits & Goal Tracker')).toBeInTheDocument();
 
     // Switch to Family
-    fireEvent.click(screen.getByRole('button', { name: /family/i }));
-    expect(screen.getByText('Family & Shared Expenses')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /family/i }));
+    expect(await screen.findByText('Family & Shared Expenses')).toBeInTheDocument();
 
     // Switch to Recurring
-    fireEvent.click(screen.getByRole('button', { name: /recurring/i }));
-    expect(screen.getByText('Recurring Expenses & Bills')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /recurring/i }));
+    expect(await screen.findByText('Recurring Expenses & Bills')).toBeInTheDocument();
   });
 });

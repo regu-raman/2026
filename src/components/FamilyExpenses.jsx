@@ -8,13 +8,17 @@ export default function FamilyExpenses({ expenses = [] }) {
   const [newMemberName, setNewMemberName] = useState('');
 
   useEffect(() => {
-    setFamilyMembers(getFamilyMembers());
+    let isMounted = true;
+    getFamilyMembers().then(members => {
+      if (isMounted && members) setFamilyMembers(members);
+    });
+    return () => { isMounted = false; };
   }, []);
 
-  const handleAddMember = (e) => {
+  const handleAddMember = async (e) => {
     e.preventDefault();
     if (!newMemberName.trim()) return;
-    const updated = addFamilyMember(newMemberName);
+    const updated = await addFamilyMember(newMemberName);
     setFamilyMembers(updated);
     setNewMemberName('');
   };

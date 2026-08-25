@@ -1,17 +1,17 @@
 import { getRecurringExpenses, saveRecurringExpenses, addExpense, getExpenses } from './storage';
 
-export const processDueRecurringExpenses = () => {
-  const recurringItems = getRecurringExpenses();
-  const currentExpenses = getExpenses();
+export const processDueRecurringExpenses = async () => {
+  const recurringItems = await getRecurringExpenses();
+  const currentExpenses = await getExpenses();
   const todayStr = new Date().toISOString().split('T')[0];
   let updatedExpenses = [...currentExpenses];
   let updatedRecurring = [];
   let addedCount = 0;
 
-  recurringItems.forEach(item => {
+  for (const item of recurringItems) {
     if (!item.active) {
       updatedRecurring.push(item);
-      return;
+      continue;
     }
 
     if (item.nextDueDate <= todayStr) {
@@ -26,7 +26,7 @@ export const processDueRecurringExpenses = () => {
         isShared: Boolean(item.isShared)
       };
 
-      updatedExpenses = addExpense(newExpense);
+      updatedExpenses = await addExpense(newExpense);
       addedCount++;
 
       // Compute next due date based on frequency
@@ -52,10 +52,10 @@ export const processDueRecurringExpenses = () => {
     } else {
       updatedRecurring.push(item);
     }
-  });
+  }
 
   if (addedCount > 0) {
-    saveRecurringExpenses(updatedRecurring);
+    await saveRecurringExpenses(updatedRecurring);
   }
 
   return { updatedExpenses, addedCount };

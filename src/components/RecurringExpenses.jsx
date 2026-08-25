@@ -19,10 +19,14 @@ export default function RecurringExpenses({ onExpensesUpdated }) {
   const [nextDueDate, setNextDueDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    setRecurringList(getRecurringExpenses());
+    let isMounted = true;
+    getRecurringExpenses().then(items => {
+      if (isMounted && items) setRecurringList(items);
+    });
+    return () => { isMounted = false; };
   }, []);
 
-  const handleToggleActive = (id) => {
+  const handleToggleActive = async (id) => {
     const updated = recurringList.map(item => {
       if (item.id === id) {
         return { ...item, active: !item.active };
@@ -30,15 +34,15 @@ export default function RecurringExpenses({ onExpensesUpdated }) {
       return item;
     });
     setRecurringList(updated);
-    saveRecurringExpenses(updated);
+    await saveRecurringExpenses(updated);
   };
 
-  const handleDelete = (id) => {
-    const updated = deleteRecurringExpense(id);
+  const handleDelete = async (id) => {
+    const updated = await deleteRecurringExpense(id);
     setRecurringList(updated);
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!amount || parseFloat(amount) <= 0) return;
 
@@ -53,19 +57,20 @@ export default function RecurringExpenses({ onExpensesUpdated }) {
       isShared: false
     };
 
-    const updated = addRecurringExpense(newItem);
+    const updated = await addRecurringExpense(newItem);
     setRecurringList(updated);
     setShowAddForm(false);
     setAmount('');
     setNote('');
   };
 
-  const handleRunSync = () => {
-    const { updatedExpenses, addedCount } = processDueRecurringExpenses();
+  const handleRunSync = async () => {
+    const { updatedExpenses, addedCount } = await processDueRecurringExpenses();
     if (addedCount > 0) {
       onExpensesUpdated(updatedExpenses);
     }
-    setRecurringList(getRecurringExpenses());
+    const items = await getRecurringExpenses();
+    setRecurringList(items);
   };
 
   return (
