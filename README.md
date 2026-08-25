@@ -48,7 +48,8 @@ To create the required database tables and security policies in Supabase:
 3. Copy the contents of [`supabase_schema.sql`](./supabase_schema.sql) in this repository.
 4. Paste into the SQL Editor and click **Run**.
 5. Copy your Supabase URL and Anon Key from **Project Settings > API**.
-6. Create a `.env` file in the root directory:
+6. Under **Authentication > URL Configuration**, add your deployed application URL (or `http://localhost:3000`) to **Site URL** and **Redirect URLs** so email confirmation links redirect back correctly.
+7. Create a `.env` file in the root directory:
    ```env
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-key-here

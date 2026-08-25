@@ -8,11 +8,15 @@ export const signUpUser = async (email, password) => {
   }
 
   if (isSupabaseConfigured()) {
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : undefined;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: redirectUrl
       }
     });
 

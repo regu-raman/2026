@@ -20,7 +20,6 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
     getFamilyMembers().then(members => {
       if (isMounted && members) setFamilyMembers(members);
     });
-    return () => { isMounted = false; };
 
     if (initialData) {
       setAmount(initialData.amount ? String(initialData.amount) : '');
@@ -40,6 +39,10 @@ export default function ExpenseModal({ isOpen, onClose, onSave, initialData = nu
       setIsShared(false);
     }
     setErrors({});
+
+    return () => {
+      isMounted = false;
+    };
   }, [initialData, isOpen]);
 
   if (!isOpen) return null;
