@@ -1,249 +1,145 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const LOCAL_SESSION_KEY = 'daily_expenses_user_session_v1';
-const USERS_DB_KEY = 'daily_expenses_users_db_v1';
 
-// Helper to retrieve all registered users from local storage user database table
-export const getUsersFromDb = () => {
-  try {
-    const data = localStorage.getItem(USERS_DB_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch (err) {
-    console.error('Error reading users database table:', err);
-    return [];
-  }
-};
-
-// Helper to save a user to local storage and Supabase database tables
-export const saveUserToDb = async (userObj) => {
-  const users = getUsersFromDb();
-  const existingIdx = users.findIndex(u => u.id === userObj.id || u.username === userObj.username || u.email === userObj.email);
-
-  if (existingIdx >= 0) {
-    users[existingIdx] = { ...users[existingIdx], ...userObj };
-  } else {
-    users.push(userObj);
-  }
-
-  localStorage.setItem(USERS_DB_KEY, JSON.stringify(users));
-
-  if (isSupabaseConfigured()) {
-    try {
-      // Sync user to Supabase users and profiles database tables
-      await supabase.from('users').upsert([{
-        id: userObj.id,
-        username: userObj.username,
-        email: userObj.email,
-        password_hash: userObj.password || 'managed_auth'
-      }]).catch(() => {});
-
-      await supabase.from('profiles').upsert([{
-        id: userObj.id,
-        username: userObj.username,
-        email: userObj.email
-      }]).catch(() => {});
-    } catch (err) {
-      console.error('Supabase user database sync error:', err);
-    }
-  }
-};
-
-export const signUpUser = async (email, username, password) => {
-  if (!email || !username || !password) {
-    throw new Error('Email, username, and password are required');
+export const signUpUser = async (email, password) => {
+  if (!email || !password) {
+    throw new Error('Email and password are required');
   }
 
   const cleanEmail = email.trim().toLowerCase();
-  const cleanUsername = username.trim().toLowerCase();
-
-  if (password.length < 6) {
-    throw new Error('Password must be at least 6 characters long');
-  }
-
-  // Check duplicate in local user DB
-  const localUsers = getUsersFromDb();
-  const duplicateUser = localUsers.find(
-    u => u.username === cleanUsername || u.email === cleanEmail
-  );
-
-  if (duplicateUser) {
-    if (duplicateUser.username === cleanUsername) {
-      throw new Error('Username is already taken. Please choose another one.');
-    } else {
-      throw new Error('An account with this email already exists. Please log in.');
-    }
-  }
-
-  // Check duplicate in Supabase DB if configured
-  if (isSupabaseConfigured()) {
-    try {
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('username, email')
-        .or(`username.eq.${cleanUsername},email.eq.${cleanEmail}`)
-        .maybeSingle();
-
-      if (existingProfile) {
-        if (existingProfile.username === cleanUsername) {
-          throw new Error('Username is already taken. Please choose another one.');
-        } else {
-          throw new Error('An account with this email already exists. Please log in.');
-        }
-      }
-    } catch (err) {
-      if (err.message && err.message.includes('already taken')) throw err;
-    }
-  }
-
-  let createdUserId = 'usr-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
-  let sessionData = null;
 
   if (isSupabaseConfigured()) {
-    try {
-      const redirectUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}${window.location.pathname}`
-        : undefined;
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : undefined;
 
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: { username: cleanUsername }
-        }
-      });
-
-      if (!error && data.user) {
-        createdUserId = data.user.id;
-        sessionData = data.session;
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl
       }
-    } catch (err) {
-      console.warn('Supabase Auth signUp fallback to local user DB:', err);
-    }
+    });
+
+    if (error) throw error;
+
+    const userObj = data.user
+      ? { ...data.user, username: data.user.email?.split('@')[0] || cleanEmail.split('@')[0] }
+      : null;
+
+    return {
+      user: userObj,
+      session: data.session,
+      needsVerification: !data.session
+    };
   }
 
-  const newUserRecord = {
-    id: createdUserId,
+  // Fallback demo user simulation
+  const dummyUser = {
+    id: 'guest-' + Date.now(),
     email: cleanEmail,
-    username: cleanUsername,
-    password: password,
-    created_at: new Date().toISOString()
+    username: cleanEmail.split('@')[0]
   };
-
-  await saveUserToDb(newUserRecord);
-
-  const sessionUser = {
-    id: createdUserId,
-    email: cleanEmail,
-    username: cleanUsername
-  };
-
-  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionUser));
-
+  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(dummyUser));
   return {
-    user: sessionUser,
-    session: sessionData || { user: sessionUser },
+    user: dummyUser,
+    session: { user: dummyUser },
     needsVerification: false
   };
 };
 
-export const signInUser = async (usernameOrEmail, password) => {
-  if (!usernameOrEmail || !password) {
-    throw new Error('Username or email and password are required');
+export const signInUser = async (email, password) => {
+  if (!email || !password) {
+    throw new Error('Email and password are required');
   }
 
-  const input = usernameOrEmail.trim().toLowerCase();
-
-  // Look up user in local DB users table
-  const localUsers = getUsersFromDb();
-  let foundLocalUser = localUsers.find(
-    u => u.username === input || u.email === input
-  );
-
-  let authenticatedUser = null;
+  const cleanEmail = email.trim().toLowerCase();
 
   if (isSupabaseConfigured()) {
-    let emailToUse = input;
-    if (!input.includes('@')) {
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('email, username')
-          .eq('username', input)
-          .maybeSingle();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password
+    });
 
-        if (profile) {
-          emailToUse = profile.email;
-        }
-      } catch (err) {
-        // ignore profile lookup error
-      }
-    }
+    if (error) throw error;
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailToUse,
-        password
-      });
+    const userObj = {
+      ...data.user,
+      username: data.user.email?.split('@')[0] || cleanEmail.split('@')[0]
+    };
 
-      if (!error && data.user) {
-        const username = data.user.user_metadata?.username || input.split('@')[0];
-        authenticatedUser = {
-          id: data.user.id,
-          email: data.user.email,
-          username: username
-        };
-      }
-    } catch (err) {
-      // ignore, fallback to local DB check
-    }
-  }
-
-  // Fallback to local DB check if Supabase did not authenticate
-  if (!authenticatedUser) {
-    if (!foundLocalUser) {
-      // Try fetching user from Supabase 'users' or 'profiles' table if local DB empty
-      if (isSupabaseConfigured()) {
-        try {
-          const { data: dbUser } = await supabase
-            .from('users')
-            .select('*')
-            .or(`username.eq.${input},email.eq.${input}`)
-            .maybeSingle();
-
-          if (dbUser) {
-            foundLocalUser = {
-              id: dbUser.id,
-              username: dbUser.username,
-              email: dbUser.email,
-              password: dbUser.password_hash
-            };
-            await saveUserToDb(foundLocalUser);
-          }
-        } catch (err) {}
-      }
-    }
-
-    if (!foundLocalUser) {
-      throw new Error('User not found. Please check your credentials or register a new account.');
-    }
-
-    if (foundLocalUser.password && foundLocalUser.password !== password) {
-      throw new Error('Invalid password. Please try again.');
-    }
-
-    authenticatedUser = {
-      id: foundLocalUser.id,
-      email: foundLocalUser.email,
-      username: foundLocalUser.username
+    return {
+      user: userObj,
+      session: data.session
     };
   }
 
-  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(authenticatedUser));
-
+  // Fallback demo user simulation
+  const dummyUser = {
+    id: 'guest-1',
+    email: cleanEmail.includes('@') ? cleanEmail : `${cleanEmail}@expensetracker.local`,
+    username: cleanEmail.split('@')[0]
+  };
+  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(dummyUser));
   return {
-    user: authenticatedUser,
-    session: { user: authenticatedUser }
+    user: dummyUser,
+    session: { user: dummyUser }
+  };
+};
+
+export const resetPasswordForEmail = async (email) => {
+  if (!email) {
+    throw new Error('Email address is required');
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (isSupabaseConfigured()) {
+    const redirectUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : undefined;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: redirectUrl
+    });
+
+    if (error) throw error;
+    return { success: true };
+  }
+
+  // Fallback demo simulation
+  return { success: true };
+};
+
+export const updateUserPassword = async (newPassword) => {
+  if (!newPassword || newPassword.length < 6) {
+    throw new Error('Password must be at least 6 characters long');
+  }
+
+  if (isSupabaseConfigured()) {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) throw error;
+
+    const userObj = data.user
+      ? { ...data.user, username: data.user.email?.split('@')[0] }
+      : null;
+
+    return {
+      user: userObj,
+      session: data.session
+    };
+  }
+
+  // Fallback demo simulation
+  const existing = localStorage.getItem(LOCAL_SESSION_KEY);
+  const user = existing ? JSON.parse(existing) : { id: 'guest-1', email: 'guest@expensetracker.local', username: 'guest' };
+  return {
+    user,
+    session: { user }
   };
 };
 
@@ -289,38 +185,32 @@ export const updateUserProfile = async (userId, updates) => {
 
 export const signOutUser = async () => {
   if (isSupabaseConfigured()) {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {}
+    await supabase.auth.signOut();
   }
   localStorage.removeItem(LOCAL_SESSION_KEY);
 };
 
 export const getCurrentUser = async () => {
-  try {
-    const data = localStorage.getItem(LOCAL_SESSION_KEY);
-    if (!data) return null;
-    const user = JSON.parse(data);
-
-    // Purge legacy guest / demo accounts
-    if (!user || user.id?.startsWith('guest-') || user.username === 'demo_user' || user.username === 'guest') {
-      localStorage.removeItem(LOCAL_SESSION_KEY);
-      return null;
-    }
-
-    if (isSupabaseConfigured()) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        let username = session.user.user_metadata?.username || user.username;
-        return {
-          id: session.user.id,
-          email: session.user.email,
-          username: username
-        };
+  if (isSupabaseConfigured()) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      try {
+        const data = localStorage.getItem(LOCAL_SESSION_KEY);
+        return data ? JSON.parse(data) : null;
+      } catch (err) {
+        return null;
       }
     }
 
-    return user;
+    return {
+      ...session.user,
+      username: session.user.email?.split('@')[0]
+    };
+  }
+
+  try {
+    const data = localStorage.getItem(LOCAL_SESSION_KEY);
+    return data ? JSON.parse(data) : null;
   } catch (err) {
     return null;
   }
@@ -328,34 +218,21 @@ export const getCurrentUser = async () => {
 
 export const onAuthStateChange = (callback) => {
   if (isSupabaseConfigured()) {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!session?.user) {
-        const localUser = await getCurrentUser();
-        callback(localUser);
+        const fallback = localStorage.getItem(LOCAL_SESSION_KEY);
+        callback(fallback ? JSON.parse(fallback) : null, event);
         return;
       }
-      let username = session.user.user_metadata?.username;
-      if (!username) {
-        try {
-          const { data: prof } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          if (prof) username = prof.username;
-        } catch (e) {}
-      }
-      const user = {
-        id: session.user.id,
-        email: session.user.email,
-        username: username || session.user.email?.split('@')[0]
-      };
-      localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(user));
-      callback(user);
+      callback({
+        ...session.user,
+        username: session.user.email?.split('@')[0]
+      }, event);
     });
     return () => subscription.unsubscribe();
   }
 
-  getCurrentUser().then(user => callback(user));
+  // Fallback trigger
+  getCurrentUser().then(user => callback(user, 'INITIAL'));
   return () => {};
 };
