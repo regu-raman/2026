@@ -6,15 +6,17 @@ import Reports from './components/Reports';
 import BudgetManager from './components/BudgetManager';
 import FamilyExpenses from './components/FamilyExpenses';
 import RecurringExpenses from './components/RecurringExpenses';
+import Profile from './components/Profile';
 import ExpenseModal from './components/ExpenseModal';
 import AuthScreen from './components/AuthScreen';
 import { getExpenses, addExpense, updateExpense, deleteExpense } from './utils/storage';
 import { processDueRecurringExpenses } from './utils/recurring';
-import { onAuthStateChange, signOutUser, getCurrentUser } from './utils/auth';
+import { onAuthStateChange, signOutUser } from './utils/auth';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [currentTheme, setCurrentTheme] = useState('indigo');
   const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
   const [expenses, setExpenses] = useState([]);
@@ -26,6 +28,9 @@ export default function App() {
     // Listen for auth state changes
     const unsubscribe = onAuthStateChange(async (user) => {
       setCurrentUser(user);
+      if (user?.theme) {
+        setCurrentTheme(user.theme);
+      }
       setAuthChecking(false);
 
       if (user) {
@@ -90,7 +95,10 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <AuthScreen onAuthSuccess={(user) => setCurrentUser(user)} />;
+    return <AuthScreen onAuthSuccess={(user) => {
+      setCurrentUser(user);
+      if (user?.theme) setCurrentTheme(user.theme);
+    }} />;
   }
 
   return (
@@ -102,6 +110,7 @@ export default function App() {
         onOpenAddModal={handleOpenAddModal}
         currentUser={currentUser}
         onSignOut={handleSignOut}
+        currentTheme={currentTheme}
       />
 
       {/* Main Content Area */}
@@ -138,6 +147,15 @@ export default function App() {
 
         {activeTab === 'recurring' && (
           <RecurringExpenses onExpensesUpdated={(updated) => setExpenses(updated)} />
+        )}
+
+        {activeTab === 'profile' && (
+          <Profile
+            currentUser={currentUser}
+            currentTheme={currentTheme}
+            onThemeChange={(theme) => setCurrentTheme(theme)}
+            onProfileUpdate={(updatedUser) => setCurrentUser(updatedUser)}
+          />
         )}
       </main>
 

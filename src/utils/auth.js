@@ -247,6 +247,46 @@ export const signInUser = async (usernameOrEmail, password) => {
   };
 };
 
+export const updateUserProfile = async (userId, updates) => {
+  if (!userId) throw new Error('User ID is required');
+
+  const localUsers = getUsersFromDb();
+  const userIdx = localUsers.findIndex(u => u.id === userId);
+
+  if (userIdx >= 0) {
+    localUsers[userIdx] = { ...localUsers[userIdx], ...updates };
+    localStorage.setItem(USERS_DB_KEY, JSON.stringify(localUsers));
+  }
+
+  const currentUser = await getCurrentUser();
+  if (currentUser && currentUser.id === userId) {
+    const updatedSessionUser = { ...currentUser, ...updates };
+    localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(updatedSessionUser));
+  }
+
+  if (isSupabaseConfigured()) {
+    try {
+      if (updates.username || updates.email || updates.theme) {
+        await supabase.from('users').update({
+          ...(updates.username ? { username: updates.username } : {}),
+          ...(updates.email ? { email: updates.email } : {}),
+          ...(updates.theme ? { theme: updates.theme } : {})
+        }).eq('id', userId);
+
+        await supabase.from('profiles').update({
+          ...(updates.username ? { username: updates.username } : {}),
+          ...(updates.email ? { email: updates.email } : {}),
+          ...(updates.theme ? { theme: updates.theme } : {})
+        }).eq('id', userId);
+      }
+    } catch (err) {
+      console.error('Error updating profile in Supabase:', err);
+    }
+  }
+
+  return await getCurrentUser();
+};
+
 export const signOutUser = async () => {
   if (isSupabaseConfigured()) {
     try {

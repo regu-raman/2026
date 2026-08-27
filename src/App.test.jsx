@@ -2,9 +2,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
-import { getUsersFromDb, signUpUser, signInUser } from './utils/auth';
+import { getUsersFromDb, signUpUser } from './utils/auth';
 
-describe('App component integration with auth flow', () => {
+describe('App component integration with auth flow and profile theme settings', () => {
   beforeEach(() => {
     localStorage.clear();
   });
@@ -76,6 +76,27 @@ describe('App component integration with auth flow', () => {
     fireEvent.click(signInBtn);
 
     expect(await screen.findByText('Today\'s Total')).toBeInTheDocument();
+  });
+
+  it('allows configuring user profile and theme settings', async () => {
+    await signUpUser('diana@example.com', 'diana', 'password123');
+    render(<App />);
+
+    // Open profile screen
+    const profileTab = await screen.findByRole('button', { name: /profile/i });
+    fireEvent.click(profileTab);
+
+    expect(await screen.findByText('Visual Theme')).toBeInTheDocument();
+
+    // Select Emerald theme
+    const emeraldThemeBtn = screen.getByRole('button', { name: /emerald forest/i });
+    fireEvent.click(emeraldThemeBtn);
+
+    // Save profile and theme settings
+    const saveBtn = screen.getByRole('button', { name: /save profile & theme/i });
+    fireEvent.click(saveBtn);
+
+    expect(await screen.findByText(/Profile settings and theme preferences updated successfully!/i)).toBeInTheDocument();
   });
 
   it('prevents registering duplicate username or email', async () => {
