@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
 
-describe('App component integration with auth flow', () => {
+describe('App component integration with auth flow and profile theme settings', () => {
   beforeEach(() => {
     localStorage.clear();
   });
