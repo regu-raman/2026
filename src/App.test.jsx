@@ -11,7 +11,20 @@ describe('App component integration with auth flow', () => {
   it('renders login/registration auth screen by default when unauthenticated', async () => {
     render(<App />);
     expect(await screen.findByText('Daily Expense Tracker')).toBeInTheDocument();
-    expect(await screen.findByText('Sign in using your username or email')).toBeInTheDocument();
+    expect(await screen.findByText('Sign in with your email address')).toBeInTheDocument();
+  });
+
+  it('allows toggling forgot password mode', async () => {
+    render(<App />);
+    const forgotBtn = await screen.findByRole('button', { name: /forgot password\?/i });
+    fireEvent.click(forgotBtn);
+
+    expect(await screen.findByText('Enter your email to receive a password reset link')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /send reset link/i })).toBeInTheDocument();
+
+    const backBtn = await screen.findByRole('button', { name: /back to log in/i });
+    fireEvent.click(backBtn);
+    expect(await screen.findByText('Sign in with your email address')).toBeInTheDocument();
   });
 
   it('allows guest login and navigates across tabs', async () => {
