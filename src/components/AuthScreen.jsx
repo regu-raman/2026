@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, Mail, Lock, User, LogIn, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Wallet, Mail, Lock, User, LogIn, UserPlus, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { signInUser, signUpUser } from '../utils/auth';
 
 export default function AuthScreen({ onAuthSuccess }) {
@@ -20,14 +20,14 @@ export default function AuthScreen({ onAuthSuccess }) {
     try {
       if (isRegister) {
         if (!email.trim() || !username.trim() || !password) {
-          throw new Error('Please fill in all required fields (Email, Username, and Password).');
+          throw new Error('Please fill in all fields (Email, Username, and Password).');
         }
         const res = await signUpUser(email, username, password);
-        setSuccessMsg('Account created successfully! Logging you in...');
-        if (res.user) {
-          setTimeout(() => {
-            onAuthSuccess(res.user);
-          }, 400);
+        if (res.needsVerification) {
+          setSuccessMsg('Registration successful! Please check your email inbox to verify your account before logging in.');
+        } else {
+          setSuccessMsg('Registration successful!');
+          if (res.user) onAuthSuccess(res.user);
         }
       } else {
         if (!username.trim() || !password) {
@@ -45,6 +45,18 @@ export default function AuthScreen({ onAuthSuccess }) {
     }
   };
 
+  const handleDemoGuestLogin = async () => {
+    try {
+      setLoading(true);
+      const res = await signInUser('demo_user', 'Demo123456!');
+      if (res.user) onAuthSuccess(res.user);
+    } catch (err) {
+      setErrorMsg('Guest login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 border border-slate-100 space-y-6">
@@ -57,7 +69,7 @@ export default function AuthScreen({ onAuthSuccess }) {
             Daily Expense Tracker
           </h1>
           <p className="text-slate-500 text-sm">
-            {isRegister ? 'Register your account to manage your expenses' : 'Sign in using your username or email'}
+            {isRegister ? 'Register your account to manage budgets' : 'Sign in using your username or email'}
           </p>
         </div>
 
@@ -122,7 +134,7 @@ export default function AuthScreen({ onAuthSuccess }) {
             </div>
           )}
 
-          {/* Username / Email field */}
+          {/* Username field */}
           <div>
             <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
               {isRegister ? 'Username *' : 'Username or Email Address *'}
@@ -165,7 +177,7 @@ export default function AuthScreen({ onAuthSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-200 transition-colors flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-200 transition-colors flex items-center justify-center space-x-2"
           >
             {loading ? (
               <span>Please wait...</span>
@@ -182,6 +194,17 @@ export default function AuthScreen({ onAuthSuccess }) {
             )}
           </button>
         </form>
+
+        <div className="relative flex items-center justify-center border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={handleDemoGuestLogin}
+            className="text-xs font-semibold text-slate-500 hover:text-indigo-600 flex items-center space-x-1 transition-colors"
+          >
+            <span>Continue as Guest / Quick Demo</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

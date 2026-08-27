@@ -6,8 +6,8 @@ const BUDGETS_KEY = 'daily_expenses_budgets_v1';
 const RECURRING_KEY = 'daily_expenses_recurring_v1';
 const FAMILY_KEY = 'daily_expenses_family_members_v1';
 
-const getUserKey = (baseKey, userId) => {
-  return userId ? `${baseKey}_${userId}` : baseKey;
+const isRealSupabaseUser = (user) => {
+  return Boolean(user && user.id && typeof user.id === 'string' && !user.id.startsWith('guest-'));
 };
 
 const formatDate = (date) => {
@@ -132,7 +132,7 @@ const getSampleFamilyMembers = () => [
 // Mappers between JS camelCase and DB snake_case
 const expenseToDb = (exp, userId) => ({
   id: exp.id,
-  user_id: userId || null,
+  user_id: userId,
   amount: exp.amount,
   category: exp.category,
   date: exp.date,
@@ -155,7 +155,7 @@ const expenseFromDb = (dbExp) => ({
 
 const recurringToDb = (rec, userId) => ({
   id: rec.id,
-  user_id: userId || null,
+  user_id: userId,
   amount: rec.amount,
   category: rec.category,
   payment_method: rec.paymentMethod,
@@ -183,10 +183,10 @@ const recurringFromDb = (dbRec) => ({
 // --- EXPENSES CRUD ---
 export const getExpenses = async () => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(EXPENSES_KEY, userId);
+  const userId = user?.id || 'guest';
+  const localKey = `${EXPENSES_KEY}_${userId}`;
 
-  if (isSupabaseConfigured() && user) {
+  if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
     try {
       const { data, error } = await supabase
         .from('expenses')
@@ -196,7 +196,7 @@ export const getExpenses = async () => {
 
       if (!error && data) {
         const mapped = data.map(expenseFromDb);
-        localStorage.setItem(storageKey, JSON.stringify(mapped));
+        localStorage.setItem(localKey, JSON.stringify(mapped));
         return mapped;
       }
     } catch (error) {
@@ -205,10 +205,10 @@ export const getExpenses = async () => {
   }
 
   try {
-    const data = localStorage.getItem(storageKey) || localStorage.getItem(EXPENSES_KEY);
+    const data = localStorage.getItem(localKey) || localStorage.getItem(EXPENSES_KEY);
     if (!data) {
       const initialData = getSampleData();
-      localStorage.setItem(storageKey, JSON.stringify(initialData));
+      localStorage.setItem(localKey, JSON.stringify(initialData));
       return initialData;
     }
     return JSON.parse(data);
@@ -220,12 +220,12 @@ export const getExpenses = async () => {
 
 export const saveExpenses = async (expenses) => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(EXPENSES_KEY, userId);
+  const userId = user?.id || 'guest';
+  const localKey = `${EXPENSES_KEY}_${userId}`;
 
   try {
-    localStorage.setItem(storageKey, JSON.stringify(expenses));
-    if (isSupabaseConfigured() && user) {
+    localStorage.setItem(localKey, JSON.stringify(expenses));
+    if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
       const dbPayload = expenses.map(e => expenseToDb(e, user.id));
       const { error } = await supabase.from('expenses').upsert(dbPayload);
       if (error) console.error('Supabase saveExpenses error:', error);
@@ -268,17 +268,20 @@ export const updateExpense = async (id, updatedData) => {
 };
 
 export const deleteExpense = async (id) => {
-  const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(EXPENSES_KEY, userId);
-
   const expenses = await getExpenses();
+  const user = await getCurrentUser();
+  const userId = user?.id || 'guest';
+  const localKey = `${EXPENSES_KEY}_${userId}`;
   const updated = expenses.filter(exp => exp.id !== id);
-  localStorage.setItem(storageKey, JSON.stringify(updated));
 
-  if (isSupabaseConfigured()) {
+  localStorage.setItem(localKey, JSON.stringify(updated));
+  if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id);
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
       if (error) console.error('Supabase deleteExpense error:', error);
     } catch (error) {
       console.error('Error deleting expense from Supabase:', error);
@@ -290,10 +293,10 @@ export const deleteExpense = async (id) => {
 // --- BUDGETS CRUD ---
 export const getBudgets = async () => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(BUDGETS_KEY, userId);
+  const userId = user?.id || 'guest';
+  const userBudgetsKey = `${BUDGETS_KEY}_${userId}`;
 
-  if (isSupabaseConfigured() && user) {
+  if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
     try {
       const { data, error } = await supabase
         .from('budgets')
@@ -306,7 +309,7 @@ export const getBudgets = async () => {
           monthlyTotal: Number(data.monthly_total) || 25000,
           categories: data.categories || {}
         };
-        localStorage.setItem(storageKey, JSON.stringify(loaded));
+        localStorage.setItem(userBudgetsKey, JSON.stringify(loaded));
         return loaded;
       }
     } catch (error) {
@@ -315,10 +318,10 @@ export const getBudgets = async () => {
   }
 
   try {
-    const data = localStorage.getItem(storageKey) || localStorage.getItem(BUDGETS_KEY);
+    const data = localStorage.getItem(userBudgetsKey) || localStorage.getItem(BUDGETS_KEY);
     if (!data) {
       const initial = getSampleBudgets();
-      localStorage.setItem(storageKey, JSON.stringify(initial));
+      localStorage.setItem(userBudgetsKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -329,12 +332,12 @@ export const getBudgets = async () => {
 
 export const saveBudgets = async (budgets) => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(BUDGETS_KEY, userId);
+  const userId = user?.id || 'guest';
+  const userBudgetsKey = `${BUDGETS_KEY}_${userId}`;
 
   try {
-    localStorage.setItem(storageKey, JSON.stringify(budgets));
-    if (isSupabaseConfigured() && user) {
+    localStorage.setItem(userBudgetsKey, JSON.stringify(budgets));
+    if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
       const dbPayload = {
         id: `budget-${user.id}`,
         user_id: user.id,
@@ -352,10 +355,10 @@ export const saveBudgets = async (budgets) => {
 // --- RECURRING EXPENSES CRUD ---
 export const getRecurringExpenses = async () => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(RECURRING_KEY, userId);
+  const userId = user?.id || 'guest';
+  const localKey = `${RECURRING_KEY}_${userId}`;
 
-  if (isSupabaseConfigured() && user) {
+  if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
     try {
       const { data, error } = await supabase
         .from('recurring_expenses')
@@ -364,7 +367,7 @@ export const getRecurringExpenses = async () => {
 
       if (!error && data && data.length > 0) {
         const mapped = data.map(recurringFromDb);
-        localStorage.setItem(storageKey, JSON.stringify(mapped));
+        localStorage.setItem(localKey, JSON.stringify(mapped));
         return mapped;
       }
     } catch (error) {
@@ -373,10 +376,10 @@ export const getRecurringExpenses = async () => {
   }
 
   try {
-    const data = localStorage.getItem(storageKey) || localStorage.getItem(RECURRING_KEY);
+    const data = localStorage.getItem(localKey) || localStorage.getItem(RECURRING_KEY);
     if (!data) {
       const initial = getSampleRecurring();
-      localStorage.setItem(storageKey, JSON.stringify(initial));
+      localStorage.setItem(localKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -387,12 +390,12 @@ export const getRecurringExpenses = async () => {
 
 export const saveRecurringExpenses = async (items) => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(RECURRING_KEY, userId);
+  const userId = user?.id || 'guest';
+  const localKey = `${RECURRING_KEY}_${userId}`;
 
   try {
-    localStorage.setItem(storageKey, JSON.stringify(items));
-    if (isSupabaseConfigured() && user) {
+    localStorage.setItem(localKey, JSON.stringify(items));
+    if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
       const dbPayload = items.map(i => recurringToDb(i, user.id));
       const { error } = await supabase.from('recurring_expenses').upsert(dbPayload);
       if (error) console.error('Supabase saveRecurringExpenses error:', error);
@@ -416,17 +419,20 @@ export const addRecurringExpense = async (item) => {
 };
 
 export const deleteRecurringExpense = async (id) => {
-  const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(RECURRING_KEY, userId);
-
   const items = await getRecurringExpenses();
+  const user = await getCurrentUser();
+  const userId = user?.id || 'guest';
+  const localKey = `${RECURRING_KEY}_${userId}`;
   const updated = items.filter(item => item.id !== id);
-  localStorage.setItem(storageKey, JSON.stringify(updated));
 
-  if (isSupabaseConfigured()) {
+  localStorage.setItem(localKey, JSON.stringify(updated));
+  if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
     try {
-      const { error } = await supabase.from('recurring_expenses').delete().eq('id', id);
+      const { error } = await supabase
+        .from('recurring_expenses')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
       if (error) console.error('Supabase deleteRecurringExpense error:', error);
     } catch (error) {
       console.error('Error deleting recurring_expense from Supabase:', error);
@@ -438,10 +444,10 @@ export const deleteRecurringExpense = async (id) => {
 // --- FAMILY MEMBERS CRUD ---
 export const getFamilyMembers = async () => {
   const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(FAMILY_KEY, userId);
+  const userId = user?.id || 'guest';
+  const localKey = `${FAMILY_KEY}_${userId}`;
 
-  if (isSupabaseConfigured() && user) {
+  if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
     try {
       const { data, error } = await supabase
         .from('family_members')
@@ -450,7 +456,7 @@ export const getFamilyMembers = async () => {
 
       if (!error && data && data.length > 0) {
         const names = data.map(m => m.name);
-        localStorage.setItem(storageKey, JSON.stringify(names));
+        localStorage.setItem(localKey, JSON.stringify(names));
         return names;
       }
     } catch (error) {
@@ -459,10 +465,10 @@ export const getFamilyMembers = async () => {
   }
 
   try {
-    const data = localStorage.getItem(storageKey) || localStorage.getItem(FAMILY_KEY);
+    const data = localStorage.getItem(localKey) || localStorage.getItem(FAMILY_KEY);
     if (!data) {
       const initial = getSampleFamilyMembers();
-      localStorage.setItem(storageKey, JSON.stringify(initial));
+      localStorage.setItem(localKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -473,18 +479,20 @@ export const getFamilyMembers = async () => {
 
 export const addFamilyMember = async (name) => {
   if (!name || !name.trim()) return await getFamilyMembers();
-  const user = await getCurrentUser();
-  const userId = user?.id;
-  const storageKey = getUserKey(FAMILY_KEY, userId);
-
   const members = await getFamilyMembers();
+  const user = await getCurrentUser();
+  const userId = user?.id || 'guest';
+  const localKey = `${FAMILY_KEY}_${userId}`;
   const trimmed = name.trim();
+
   if (!members.includes(trimmed)) {
     const updated = [...members, trimmed];
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-    if (isSupabaseConfigured() && user) {
+    localStorage.setItem(localKey, JSON.stringify(updated));
+    if (isSupabaseConfigured() && isRealSupabaseUser(user)) {
       try {
-        const { error } = await supabase.from('family_members').insert([{ name: trimmed, user_id: user.id }]);
+        const { error } = await supabase
+          .from('family_members')
+          .insert([{ name: trimmed, user_id: user.id }]);
         if (error) console.error('Supabase addFamilyMember error:', error);
       } catch (error) {
         console.error('Error adding family_member to Supabase:', error);
