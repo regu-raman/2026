@@ -49,6 +49,16 @@ CREATE TABLE IF NOT EXISTS public.family_members (
 );
 
 -- 5. Create profiles table for username and user profile mapping
+-- 5. Create users table for registered users
+CREATE TABLE IF NOT EXISTS public.users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 6. Create profiles table for username and user profile mapping
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username TEXT UNIQUE NOT NULL,
@@ -61,6 +71,7 @@ ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.family_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing public policies if re-running
@@ -94,9 +105,21 @@ CREATE POLICY "User family members access" ON public.family_members
 CREATE POLICY "Public profile lookup" ON public.profiles
     FOR SELECT USING (true);
 
+CREATE POLICY "Public profile insert" ON public.profiles
+    FOR INSERT WITH CHECK (true);
+
 CREATE POLICY "User profile modification" ON public.profiles
     FOR ALL USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Public users lookup" ON public.users
+    FOR SELECT USING (true);
+
+CREATE POLICY "Public users insert" ON public.users
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "User users modification" ON public.users
+    FOR ALL USING (auth.uid() = id OR true);
 
 -- Insert Default Family Members
 INSERT INTO public.family_members (name) VALUES

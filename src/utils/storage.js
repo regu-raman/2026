@@ -6,6 +6,10 @@ const BUDGETS_KEY = 'daily_expenses_budgets_v1';
 const RECURRING_KEY = 'daily_expenses_recurring_v1';
 const FAMILY_KEY = 'daily_expenses_family_members_v1';
 
+const getUserKey = (baseKey, userId) => {
+  return userId ? `${baseKey}_${userId}` : baseKey;
+};
+
 const formatDate = (date) => {
   const d = new Date(date);
   const year = d.getFullYear();
@@ -179,16 +183,20 @@ const recurringFromDb = (dbRec) => ({
 // --- EXPENSES CRUD ---
 export const getExpenses = async () => {
   const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(EXPENSES_KEY, userId);
+
   if (isSupabaseConfigured() && user) {
     try {
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false });
 
       if (!error && data) {
         const mapped = data.map(expenseFromDb);
-        localStorage.setItem(EXPENSES_KEY, JSON.stringify(mapped));
+        localStorage.setItem(storageKey, JSON.stringify(mapped));
         return mapped;
       }
     } catch (error) {
@@ -197,10 +205,10 @@ export const getExpenses = async () => {
   }
 
   try {
-    const data = localStorage.getItem(EXPENSES_KEY);
+    const data = localStorage.getItem(storageKey) || localStorage.getItem(EXPENSES_KEY);
     if (!data) {
       const initialData = getSampleData();
-      localStorage.setItem(EXPENSES_KEY, JSON.stringify(initialData));
+      localStorage.setItem(storageKey, JSON.stringify(initialData));
       return initialData;
     }
     return JSON.parse(data);
@@ -212,8 +220,11 @@ export const getExpenses = async () => {
 
 export const saveExpenses = async (expenses) => {
   const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(EXPENSES_KEY, userId);
+
   try {
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
+    localStorage.setItem(storageKey, JSON.stringify(expenses));
     if (isSupabaseConfigured() && user) {
       const dbPayload = expenses.map(e => expenseToDb(e, user.id));
       const { error } = await supabase.from('expenses').upsert(dbPayload);
@@ -257,9 +268,14 @@ export const updateExpense = async (id, updatedData) => {
 };
 
 export const deleteExpense = async (id) => {
+  const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(EXPENSES_KEY, userId);
+
   const expenses = await getExpenses();
   const updated = expenses.filter(exp => exp.id !== id);
-  localStorage.setItem(EXPENSES_KEY, JSON.stringify(updated));
+  localStorage.setItem(storageKey, JSON.stringify(updated));
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase.from('expenses').delete().eq('id', id);
@@ -274,8 +290,8 @@ export const deleteExpense = async (id) => {
 // --- BUDGETS CRUD ---
 export const getBudgets = async () => {
   const user = await getCurrentUser();
-  const userId = user?.id || 'guest';
-  const userBudgetsKey = `${BUDGETS_KEY}_${userId}`;
+  const userId = user?.id;
+  const storageKey = getUserKey(BUDGETS_KEY, userId);
 
   if (isSupabaseConfigured() && user) {
     try {
@@ -290,7 +306,7 @@ export const getBudgets = async () => {
           monthlyTotal: Number(data.monthly_total) || 25000,
           categories: data.categories || {}
         };
-        localStorage.setItem(userBudgetsKey, JSON.stringify(loaded));
+        localStorage.setItem(storageKey, JSON.stringify(loaded));
         return loaded;
       }
     } catch (error) {
@@ -299,10 +315,10 @@ export const getBudgets = async () => {
   }
 
   try {
-    const data = localStorage.getItem(userBudgetsKey) || localStorage.getItem(BUDGETS_KEY);
+    const data = localStorage.getItem(storageKey) || localStorage.getItem(BUDGETS_KEY);
     if (!data) {
       const initial = getSampleBudgets();
-      localStorage.setItem(userBudgetsKey, JSON.stringify(initial));
+      localStorage.setItem(storageKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -313,11 +329,11 @@ export const getBudgets = async () => {
 
 export const saveBudgets = async (budgets) => {
   const user = await getCurrentUser();
-  const userId = user?.id || 'guest';
-  const userBudgetsKey = `${BUDGETS_KEY}_${userId}`;
+  const userId = user?.id;
+  const storageKey = getUserKey(BUDGETS_KEY, userId);
 
   try {
-    localStorage.setItem(userBudgetsKey, JSON.stringify(budgets));
+    localStorage.setItem(storageKey, JSON.stringify(budgets));
     if (isSupabaseConfigured() && user) {
       const dbPayload = {
         id: `budget-${user.id}`,
@@ -336,12 +352,19 @@ export const saveBudgets = async (budgets) => {
 // --- RECURRING EXPENSES CRUD ---
 export const getRecurringExpenses = async () => {
   const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(RECURRING_KEY, userId);
+
   if (isSupabaseConfigured() && user) {
     try {
-      const { data, error } = await supabase.from('recurring_expenses').select('*');
+      const { data, error } = await supabase
+        .from('recurring_expenses')
+        .select('*')
+        .eq('user_id', user.id);
+
       if (!error && data && data.length > 0) {
         const mapped = data.map(recurringFromDb);
-        localStorage.setItem(RECURRING_KEY, JSON.stringify(mapped));
+        localStorage.setItem(storageKey, JSON.stringify(mapped));
         return mapped;
       }
     } catch (error) {
@@ -350,10 +373,10 @@ export const getRecurringExpenses = async () => {
   }
 
   try {
-    const data = localStorage.getItem(RECURRING_KEY);
+    const data = localStorage.getItem(storageKey) || localStorage.getItem(RECURRING_KEY);
     if (!data) {
       const initial = getSampleRecurring();
-      localStorage.setItem(RECURRING_KEY, JSON.stringify(initial));
+      localStorage.setItem(storageKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -364,8 +387,11 @@ export const getRecurringExpenses = async () => {
 
 export const saveRecurringExpenses = async (items) => {
   const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(RECURRING_KEY, userId);
+
   try {
-    localStorage.setItem(RECURRING_KEY, JSON.stringify(items));
+    localStorage.setItem(storageKey, JSON.stringify(items));
     if (isSupabaseConfigured() && user) {
       const dbPayload = items.map(i => recurringToDb(i, user.id));
       const { error } = await supabase.from('recurring_expenses').upsert(dbPayload);
@@ -390,9 +416,14 @@ export const addRecurringExpense = async (item) => {
 };
 
 export const deleteRecurringExpense = async (id) => {
+  const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(RECURRING_KEY, userId);
+
   const items = await getRecurringExpenses();
   const updated = items.filter(item => item.id !== id);
-  localStorage.setItem(RECURRING_KEY, JSON.stringify(updated));
+  localStorage.setItem(storageKey, JSON.stringify(updated));
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase.from('recurring_expenses').delete().eq('id', id);
@@ -407,12 +438,19 @@ export const deleteRecurringExpense = async (id) => {
 // --- FAMILY MEMBERS CRUD ---
 export const getFamilyMembers = async () => {
   const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(FAMILY_KEY, userId);
+
   if (isSupabaseConfigured() && user) {
     try {
-      const { data, error } = await supabase.from('family_members').select('name');
+      const { data, error } = await supabase
+        .from('family_members')
+        .select('name')
+        .eq('user_id', user.id);
+
       if (!error && data && data.length > 0) {
         const names = data.map(m => m.name);
-        localStorage.setItem(FAMILY_KEY, JSON.stringify(names));
+        localStorage.setItem(storageKey, JSON.stringify(names));
         return names;
       }
     } catch (error) {
@@ -421,10 +459,10 @@ export const getFamilyMembers = async () => {
   }
 
   try {
-    const data = localStorage.getItem(FAMILY_KEY);
+    const data = localStorage.getItem(storageKey) || localStorage.getItem(FAMILY_KEY);
     if (!data) {
       const initial = getSampleFamilyMembers();
-      localStorage.setItem(FAMILY_KEY, JSON.stringify(initial));
+      localStorage.setItem(storageKey, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
@@ -435,12 +473,15 @@ export const getFamilyMembers = async () => {
 
 export const addFamilyMember = async (name) => {
   if (!name || !name.trim()) return await getFamilyMembers();
-  const members = await getFamilyMembers();
   const user = await getCurrentUser();
+  const userId = user?.id;
+  const storageKey = getUserKey(FAMILY_KEY, userId);
+
+  const members = await getFamilyMembers();
   const trimmed = name.trim();
   if (!members.includes(trimmed)) {
     const updated = [...members, trimmed];
-    localStorage.setItem(FAMILY_KEY, JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
     if (isSupabaseConfigured() && user) {
       try {
         const { error } = await supabase.from('family_members').insert([{ name: trimmed, user_id: user.id }]);
