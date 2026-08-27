@@ -21,10 +21,18 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [authScreenMode, setAuthScreenMode] = useState('login');
 
   useEffect(() => {
     // Listen for auth state changes
-    const unsubscribe = onAuthStateChange(async (user) => {
+    const unsubscribe = onAuthStateChange(async (user, event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthScreenMode('reset');
+        setCurrentUser(null);
+        setAuthChecking(false);
+        return;
+      }
+
       setCurrentUser(user);
       setAuthChecking(false);
 
@@ -90,7 +98,15 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <AuthScreen onAuthSuccess={(user) => setCurrentUser(user)} />;
+    return (
+      <AuthScreen
+        initialMode={authScreenMode}
+        onAuthSuccess={(user) => {
+          setAuthScreenMode('login');
+          setCurrentUser(user);
+        }}
+      />
+    );
   }
 
   return (
